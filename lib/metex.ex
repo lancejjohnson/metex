@@ -1,18 +1,16 @@
 defmodule Metex do
-  @moduledoc """
-  Documentation for Metex.
-  """
+  def temperatures_of(cities) do
+    coordinator = spawn Metex.Coordinator, :loop, [[], Enum.count(cities), self()]
 
-  @doc """
-  Hello world.
+    for city <- cities,
+      do: Metex.Worker |> spawn(:loop, []) |> send({coordinator, city})
 
-  ## Examples
-
-      iex> Metex.hello
-      :world
-
-  """
-  def hello do
-    :world
+    receive do
+      {:ok, final_results} ->
+        IO.inspect final_results |> Enum.join(", "), label: "#{__MODULE__}"
+        final_results
+      _ ->
+        IO.puts "Received message I don't understand"
+    end
   end
 end
