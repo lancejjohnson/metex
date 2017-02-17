@@ -1,50 +1,59 @@
 defmodule Metex.Worker do
-  @doc """
-  Function that:
+  use GenServer
 
-  *   sets up a Worker to be used as a process.
-  *   defines the data patterns that the process works with in the `receive`
-      block.
-  *   recurses on itself so that the process can remain active and receive
-      additional messages.
+  ## Client API
 
-  With this setup the module can be used synchronously within the system
-
-      Metex.Worker.temperature_of("London")
-
-  or asynchronously
-
-      pid = spawn Metex.Worker, :loop, []
-      send pid, {self(), "London"}
-  """
-  def loop do
-    receive do
-      {sender_pid, location} ->
-        send sender_pid, {:ok, temperature_of(location)}
-      _ ->
-        IO.puts "don't know how to process message."
-    end
-
-    loop()
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, :ok, opts)
   end
 
-  def temperature_of(location) do
-    result = url_for(location) |> HTTPoison.get |> parse_response
-    case result do
+  def get_temperature(pid, location) do
+    GenServer.call(pid, {:location, location})
+  end
+
+  def get_stats(pid) do
+    GenServer.call(pid, :get_stats)
+  end
+
+  ## Server Callbacks
+
+  def init(:ok) do
+    {:ok, %{}}
+  end
+
+  def handle_call({:location, location}, _from, stats) do
+    case temperature_of(location) do
       {:ok, temp} ->
-        "#{location}: #{temp}C"
-      :error ->
-        "#{location} not found."
+        new_stats = update_stats(stats, location)
+        {:reply, "#{temp}°C", new_stats}
+      _ ->
+        {:reply, :error, stats}
+    end
+  end
+
+  def handle_call(:get_stats, _from, stats) do
+    {:reply, stats, stats}
+  end
+
+  ## Helper Functions
+
+  defp temperature_of(location) do
+    location |> url_for() |> HTTPoison.get() |> parse_response()
+  end
+
+  defp update_stats(old_stats, location) do
+    case Map.has_key?(old_stats, location) do
+      true  -> Map.update!(old_stats, location, &(&1 + 1))
+      false -> Map.put_new(old_stats, location, 1)
     end
   end
 
   defp url_for(location) do
-    location = URI.encode(location)
-    "http://api.openweathermap.org/data/2.5/weather?q=#{location}&appid=#{api_key()}"
+    "http://api.openweathermap.org/data/2.5/weather?q=#{location}&APPID=#{app_id()}"
   end
 
   defp parse_response({:ok, %HTTPoison.Response{body: body, status_code: 200}}) do
-    body |> JSON.decode! |> compute_temperature
+    body |> JSON.decode! |> compute_temperature()
   end
 
   defp parse_response(_), do: :error
@@ -58,7 +67,7 @@ defmodule Metex.Worker do
     end
   end
 
-  defp api_key do
+  defp app_id do
     "0efd074a45a7db913b281c19ec549891"
   end
 end
