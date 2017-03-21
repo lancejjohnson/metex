@@ -38,7 +38,7 @@ defmodule Metex.Worker do
   ## Helper Functions
 
   defp temperature_of(location) do
-    location |> url_for() |> HTTPoison.get() |> parse_response()
+    location |> Metex.OpenWeather.get |> parse_response()
   end
 
   defp update_stats(old_stats, location) do
@@ -48,15 +48,13 @@ defmodule Metex.Worker do
     end
   end
 
-  defp url_for(location) do
-    "http://api.openweathermap.org/data/2.5/weather?q=#{location}&APPID=#{app_id()}"
+  defp parse_response({:ok, weather_data}) do
+    compute_temperature(weather_data)
   end
 
-  defp parse_response({:ok, %HTTPoison.Response{body: body, status_code: 200}}) do
-    body |> JSON.decode! |> compute_temperature()
+  defp parse_response(_) do
+    :error
   end
-
-  defp parse_response(_), do: :error
 
   defp compute_temperature(json) do
     try do
@@ -65,9 +63,5 @@ defmodule Metex.Worker do
     rescue
       _ -> :error
     end
-  end
-
-  defp app_id do
-    "0efd074a45a7db913b281c19ec549891"
   end
 end
