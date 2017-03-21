@@ -13,4 +13,12 @@ defmodule Metex.WorkerTest do
     temp = Worker.get_temperature(worker, "Wake Forest, NC")
     assert temp =~ ~r/\d+°C/
   end
+
+  test "resetting the state of the server", %{worker: worker} do
+     temp = Worker.get_temperature(worker, "Wake Forest, NC")
+     before = Worker.get_stats(worker)
+     Worker.reset_stats(worker)
+
+     refute before == Worker.get_stats(worker)
+  end
 end
