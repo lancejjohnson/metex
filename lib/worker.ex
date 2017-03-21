@@ -38,7 +38,7 @@ defmodule Metex.Worker do
   ## Helper Functions
 
   defp temperature_of(location) do
-    location |> Metex.OpenWeather.get |> parse_response()
+    location |> Metex.OpenWeather.get() |> compute_temperature()
   end
 
   defp update_stats(old_stats, location) do
@@ -48,20 +48,16 @@ defmodule Metex.Worker do
     end
   end
 
-  defp parse_response({:ok, weather_data}) do
-    compute_temperature(weather_data)
-  end
-
-  defp parse_response(_) do
-    :error
-  end
-
-  defp compute_temperature(json) do
+  defp compute_temperature({:ok, json}) do
     try do
       temp = (json["main"]["temp"] - 273.15) |> Float.round(1)
       {:ok, temp}
     rescue
       _ -> :error
     end
+  end
+
+  defp compute_temperature(_) do
+    :error
   end
 end
