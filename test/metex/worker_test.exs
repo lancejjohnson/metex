@@ -17,8 +17,12 @@ defmodule Metex.WorkerTest do
   test "resetting the state of the server", %{worker: worker} do
      temp = Worker.get_temperature(worker, "Wake Forest, NC")
      before = Worker.get_stats(worker)
-     Worker.reset_stats(worker)
+     :ok = Worker.reset_stats(worker)
 
      refute before == Worker.get_stats(worker)
+  end
+
+  test "stopping the server", %{worker: worker} do
+    assert :ok == Worker.stop(worker)
   end
 end

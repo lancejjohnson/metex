@@ -19,10 +19,19 @@ defmodule Metex.Worker do
     GenServer.cast(pid, :reset_stats)
   end
 
+  def stop(pid) do
+    GenServer.cast(pid, :stop)
+  end
+
   ## Server Callbacks
 
   def init(:ok) do
     {:ok, %{}}
+  end
+
+  def terminate(reason, state) do
+    IO.inspect "Server terminated due to #{inspect reason}.\n" <>
+               "Final server state: #{inspect state}"
   end
 
   def handle_call({:location, location}, _from, stats) do
@@ -41,6 +50,17 @@ defmodule Metex.Worker do
 
   def handle_cast(:reset_stats, _stats) do
     {:noreply, %{}}
+  end
+
+  def handle_cast(:stop, stats) do
+    {:stop, :normal, stats}
+  end
+
+  # `handle_info/2` is called whenever the server process receives a message
+  # for which it has neither a `handle_call/3` or `handle_cast/2` defined.
+  def handle_info(msg, state) do
+    IO.inspect "Received #{msg}"
+    {:noreply, state}
   end
 
   ## Helper Functions
